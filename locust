@@ -1,1 +1,34 @@
+from locust import HttpUser, task, between, LoadTestShape
+
+class HomepageUser(HttpUser):
+    wait_time = between(5, 10)  # Użytkownicy zostają na stronie przez pewien czas
+    host = "www.example.com"
+    auth = ("abc", "1234") 
+
+    @task
+    def visit_homepage(self):
+        """ Test: 100 użytkowników na stronę główną w każdej sekundzie przez 5 sekund"""
+        response = self.client.get("/landing", auth=self.auth)  # 🔥 GET z autoryzacją
+
+        if response.status_code == 200:
+            print("Strona główna załadowana poprawnie ✅")
+        else:
+            print(f"❌ Błąd ładowania strony głównej: {response.status_code}")
+
+# obciążenie: 100 użytkowników na sekundę przez 5 sekund
+class StepLoadTest(LoadTestShape):
+    stages = [
+        {"duration": 1, "users": 100, "spawn_rate": 100},  # 1 sekunda → 100 użytkowników
+        {"duration": 2, "users": 200, "spawn_rate": 100},  # 2 sekunda → 200 użytkowników
+        {"duration": 3, "users": 300, "spawn_rate": 100},  # 3 sekunda → 300 użytkowników
+        {"duration": 4, "users": 400, "spawn_rate": 100},  # 4 sekunda → 400 użytkowników
+        {"duration": 5, "users": 500, "spawn_rate": 100},  # 5 sekunda → 500 użytkowników
+    ]
+
+    def tick(self):
+        run_time = self.get_run_time()
+        for stage in self.stages:
+            if run_time < stage["duration"]:
+                return stage["users"], stage["spawn_rate"]
+        return 0, 1  # Zamiast (0, 0), dajemy (0, 1), aby uniknąć dzielenia przez 0
 
